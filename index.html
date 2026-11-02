@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Animal Courtroom - Interactive Quiz</title>
+<style>
+  :root {
+    --bg: #f9f6ef;
+    --surface: #ffffff;
+    --ink: #1c1c1c;
+    --muted: #6b6b6b;
+    --gold: #c99a2e;
+    --gold-soft: #f3e7c6;
+    --ok: #2e7d4f;
+    --ok-soft: #e3f3ea;
+    --bad: #b03a2e;
+    --bad-soft: #f8e4e1;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141414;
+      --surface: #1f1f1f;
+      --ink: #f2f2f2;
+      --muted: #a8a8a8;
+      --gold: #e0b04a;
+      --gold-soft: #3a2f16;
+      --ok: #5fbf85;
+      --ok-soft: #173223;
+      --bad: #e0776a;
+      --bad-soft: #3a1d19;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141414;
+    --surface: #1f1f1f;
+    --ink: #f2f2f2;
+    --muted: #a8a8a8;
+    --gold: #e0b04a;
+    --gold-soft: #3a2f16;
+    --ok: #5fbf85;
+    --ok-soft: #173223;
+    --bad: #e0776a;
+    --bad-soft: #3a1d19;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: 24px 16px;
+  }
+  .card {
+    width: 100%;
+    max-width: 620px;
+    background: var(--surface);
+    border: 2px solid var(--gold);
+    border-radius: 16px;
+    padding: 28px 24px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+  }
+  h1 {
+    margin: 0 0 4px;
+    font-size: 1.5rem;
+    color: var(--gold);
+    text-align: center;
+  }
+  .sub {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin-bottom: 20px;
+  }
+  .progress-wrap {
+    background: var(--gold-soft);
+    border-radius: 999px;
+    height: 8px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .progress {
+    height: 100%;
+    width: 0%;
+    background: var(--gold);
+    transition: width 0.3s ease;
+  }
+  .meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 18px;
+  }
+  .question {
+    font-size: 1.2rem;
+    font-weight: 700;
+    line-height: 1.6;
+    margin: 0 0 18px;
+  }
+  .options { display: grid; gap: 10px; }
+  .opt {
+    width: 100%;
+    text-align: left;
+    padding: 12px 16px;
+    font: inherit;
+    font-size: 1rem;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1.5px solid var(--gold-soft);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .opt:hover:not(:disabled) { border-color: var(--gold); }
+  .opt:disabled { cursor: default; }
+  .opt.correct { background: var(--ok-soft); border-color: var(--ok); color: var(--ok); font-weight: 700; }
+  .opt.wrong { background: var(--bad-soft); border-color: var(--bad); color: var(--bad); }
+  .feedback {
+    margin-top: 16px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    font-size: 0.97rem;
+    line-height: 1.6;
+    display: none;
+  }
+  .feedback.show { display: block; }
+  .feedback.ok { background: var(--ok-soft); color: var(--ink); }
+  .feedback.bad { background: var(--bad-soft); color: var(--ink); }
+  .actions { margin-top: 18px; display: flex; justify-content: flex-start; }
+  .btn {
+    font: inherit;
+    font-weight: 700;
+    padding: 10px 22px;
+    border-radius: 10px;
+    border: none;
+    background: var(--gold);
+    color: #111;
+    cursor: pointer;
+  }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .result { text-align: center; }
+  .result .big { font-size: 3rem; font-weight: 800; color: var(--gold); margin: 12px 0 4px; }
+  .result .verdict { font-size: 1.3rem; font-weight: 700; margin-bottom: 8px; }
+  .result p { color: var(--muted); line-height: 1.6; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div id="quiz">
+    <h1>The Animal Courtroom</h1>
+    <div class="sub">Interactive quiz based on the presentation "The Animal Courtroom"</div>
+    <div class="progress-wrap"><div class="progress" id="bar"></div></div>
+    <div class="meta">
+      <span id="qnum"></span>
+      <span id="score"></span>
+    </div>
+    <p class="question" id="question"></p>
+    <div class="options" id="options"></div>
+    <div class="feedback" id="feedback"></div>
+    <div class="actions">
+      <button class="btn" id="next" disabled>Next</button>
+    </div>
+  </div>
+
+  <div id="result" class="result hidden">
+    <h1>The Court Rules</h1>
+    <div class="big" id="final"></div>
+    <div class="verdict" id="verdict"></div>
+    <p id="verdictText"></p>
+    <div class="actions" style="justify-content:center;">
+      <button class="btn" id="restart">Retake the Quiz</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const QUESTIONS = [
+    {
+      q: "What is the court putting on trial in this presentation?",
+      options: ["Fish only", "Fur, claws, wings, and scales", "Predatory animals only", "Forests and mountains"],
+      answer: 1,
+      explain: "The court examines four features: fur, claws, wings, and scales, and asks whether they are lawful."
+    },
+    {
+      q: "What is the main function of the polar bear's dense fur?",
+      options: ["Decoration and beauty", "Improving its swimming ability", "Trapping body heat and protecting it from cold", "Camouflage in forests"],
+      answer: 2,
+      explain: "Thick outer fur blocks wind and ice, while dense underfur traps body heat. It is essential for survival in the polar habitat."
+    },
+    {
+      q: "What ruling does the defense ask the court to make about fur?",
+      options: ["Fur is a luxury that can be dropped", "Fur is essential and protected", "Fur should be put on trial", "Fur is a danger to the environment"],
+      answer: 1,
+      explain: "The defense argues that fur is a necessary shield, and that fur is essential and protected by nature."
+    },
+    {
+      q: "According to the presentation, what is the function of a falcon's wings?",
+      options: ["They provide lift and steering control", "They store water", "They only protect from cold", "They are used for vocal communication"],
+      answer: 0,
+      explain: "Strong feathers create lift and steering control, allowing fast and precise flight."
+    },
+    {
+      q: "What do a falcon's claws do?",
+      options: ["Clean its feathers", "Grip prey and secure landing", "Dig into the ground", "Push water away"],
+      answer: 1,
+      explain: "Sharp talons grip prey and secure landing."
+    },
+    {
+      q: "During the STRIKE stage, what do the falcon's wings do?",
+      options: ["Spread to their maximum width", "Fold for speed and accuracy", "Stop moving completely", "Turn into claws"],
+      answer: 1,
+      explain: "When striking, the wings fold to increase speed and accuracy."
+    },
+    {
+      q: "What verdict does the court seek for claws and wings?",
+      options: ["Essential, not excessive", "Excessive and should be trimmed", "Decorative with no function", "Illegal"],
+      answer: 0,
+      explain: "The verdict sought is 'Essential. Not excessive.'"
+    },
+    {
+      q: "What is the function of a fish's scales?",
+      options: ["Increasing body weight", "Reducing drag and protecting the body", "Attracting other fish", "Regulating temperature only"],
+      answer: 1,
+      explain: "Scales are lightweight overlapping plates that reduce drag in water and protect the body."
+    },
+    {
+      q: "How are the scales arranged on a fish's body?",
+      options: ["They overlap to create a smooth surface", "They spread apart to allow breathing", "They point perpendicular to the body", "They detach with every movement"],
+      answer: 0,
+      explain: "Scales overlap, creating a smooth surface that makes movement through water easier."
+    },
+    {
+      q: "Which of the three habitats in the presentation features saltwater and ocean currents?",
+      options: ["Polar", "Jungle", "Ocean", "Mountain"],
+      answer: 2,
+      explain: "The Ocean habitat includes saltwater worlds, ocean currents, and deep ecosystems."
+    },
+    {
+      q: "What rule governs habitats according to the presentation?",
+      options: ["Animals may switch habitats freely", "Animals cannot switch habitats", "Habitats are not binding", "Habitats change every year"],
+      answer: 1,
+      explain: "Animals cannot switch habitats, because ecosystems are binding legal jurisdictions."
+    },
+    {
+      q: "What is the final verdict of the court?",
+      options: ["Guilty", "Not guilty", "Case postponed", "No verdict can be reached"],
+      answer: 1,
+      explain: "The final verdict is NOT GUILTY, because nature does not break the law."
+    },
+    {
+      q: "According to the final verdict, what is the 'supreme law' of nature?",
+      options: ["Strength", "Adaptation", "Competition", "Luck"],
+      answer: 1,
+      explain: "Adaptation is the supreme law of nature. Every trait has a purpose, and every purpose drives survival."
+    },
+    {
+      q: "What does the court order describe as a 'crime against nature'?",
+      options: ["Protecting nature reserves", "Destroying or degrading habitats", "Monitoring wildlife", "Conducting scientific research"],
+      answer: 1,
+      explain: "Destroying or degrading habitats is a crime against nature under the court order."
+    },
+    {
+      q: "What is the court's mandate according to the court order?",
+      options: ["Hunting animals in greater numbers", "Protecting wildlife and preserving habitats", "Moving animals into cities", "Increasing commercial activity"],
+      answer: 1,
+      explain: "The mandate is to protect wildlife, preserve habitats, and keep nature thriving for future generations."
+    }
+  ];
+
+  let current = 0;
+  let score = 0;
+  let answered = false;
+
+  const $ = id => document.getElementById(id);
+
+  function render() {
+    answered = false;
+    const q = QUESTIONS[current];
+    $("qnum").textContent = `Question ${current + 1} of ${QUESTIONS.length}`;
+    $("score").textContent = `Score: ${score}`;
+    $("bar").style.width = `${(current / QUESTIONS.length) * 100}%`;
+    $("question").textContent = q.q;
+
+    const box = $("options");
+    box.innerHTML = "";
+    q.options.forEach((text, i) => {
+      const b = document.createElement("button");
+      b.className = "opt";
+      b.textContent = text;
+      b.onclick = () => choose(i);
+      box.appendChild(b);
+    });
+
+    const fb = $("feedback");
+    fb.className = "feedback";
+    fb.textContent = "";
+    $("next").disabled = true;
+    $("next").textContent = current === QUESTIONS.length - 1 ? "See Result" : "Next";
+  }
+
+  function choose(i) {
+    if (answered) return;
+    answered = true;
+    const q = QUESTIONS[current];
+    const buttons = document.querySelectorAll("#options .opt");
+    buttons.forEach(b => b.disabled = true);
+    buttons[q.answer].classList.add("correct");
+
+    const fb = $("feedback");
+    if (i === q.answer) {
+      score++;
+      $("score").textContent = `Score: ${score}`;
+      fb.className = "feedback show ok";
+      fb.textContent = "Correct! " + q.explain;
+    } else {
+      buttons[i].classList.add("wrong");
+      fb.className = "feedback show bad";
+      fb.textContent = "Not quite. " + q.explain;
+    }
+    $("next").disabled = false;
+  }
+
+  $("next").onclick = () => {
+    current++;
+    if (current < QUESTIONS.length) {
+      render();
+    } else {
+      showResult();
+    }
+  };
+
+  function showResult() {
+    $("quiz").classList.add("hidden");
+    $("result").classList.remove("hidden");
+    $("bar").style.width = "100%";
+    const total = QUESTIONS.length;
+    const pct = Math.round((score / total) * 100);
+    $("final").textContent = `${score} / ${total}`;
+
+    let verdict, text;
+    if (pct >= 90) {
+      verdict = "Acquitted with Distinction";
+      text = "Nature's court recognizes a deep understanding of adaptation and habitats.";
+    } else if (pct >= 60) {
+      verdict = "Not Guilty";
+      text = "Good work. Review the questions you missed to sharpen your understanding.";
+    } else {
+      verdict = "Case Postponed";
+      text = "No problem. Review the presentation and try again.";
+    }
+    $("verdict").textContent = verdict;
+    $("verdictText").textContent = text;
+  }
+
+  $("restart").onclick = () => {
+    current = 0;
+    score = 0;
+    $("result").classList.add("hidden");
+    $("quiz").classList.remove("hidden");
+    render();
+  };
+
+  render();
+</script>
+</body>
+</html>
